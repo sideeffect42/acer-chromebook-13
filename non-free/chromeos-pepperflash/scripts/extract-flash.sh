@@ -15,7 +15,14 @@ fi
 
 echo "==> Initializing..."
 
+# Check if we can ping google.com
+if ! ping -c 1 "google.com" &> /dev/null; then
+	echo "Make sure that you have a working internet connection"
+	exit 1
+fi
+
 # Get image URL
+FOUND_DEVICE=0
 DEVICE_NAME=""
 RECOVERY_URL=""
 RECOVERY_FILE_NAME=""
@@ -26,7 +33,8 @@ while read line; do
 		DEVICE_NAME="${line/name=/}"
 	fi
 
-	if [ "${DEVICE_NAME}" == "Acer Chromebook 13" ]; then
+	if [ "${DEVICE_NAME}" == "Acer Chromebook 13 (CB5-311)" ]; then
+		FOUND_DEVICE=1
 		if [ "x" == "x${line}" ]; then
 			# block is finished
 			break
@@ -46,9 +54,19 @@ while read line; do
 	fi
 done <<< "$("${CURL_BIN}" https://dl.google.com/dl/edgedl/chromeos/recovery/recovery.conf 2>/dev/null)"
 
+if [ ${FOUND_DEVICE:=0} -eq 0 ]; then
+	echo "Could not find device"
+	exit 1
+fi
+
 echo "==> Using device: ${DEVICE_NAME}"
 
 # Download latest ChromeOS recovery image
+if [ -z "${RECOVERY_URL}" ]; then
+	echo "Cannot find url to download from."
+	exit 1
+fi
+
 RECOVERY_IMG_TMP_DIR="$(mktemp -d -t cros_recovery.XXXXXX)"
 RECOVERY_ZIP_FILE="${RECOVERY_IMG_TMP_DIR:?}/${RECOVERY_URL##*/}"
 RECOVERY_BIN_FILE="${RECOVERY_IMG_TMP_DIR:?}/${RECOVERY_FILE_NAME##*/}"
